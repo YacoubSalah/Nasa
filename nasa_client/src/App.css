@@ -1,0 +1,19 @@
+.navigationMenu {
+    background-color: #ced4da;
+    padding: .8vh;
+    margin-bottom: .5vh;
+    height: 2rem;
+    text-align: center;
+}
+
+.link {
+    text-decoration: none;
+    color: #343a40;
+    padding-left: 5%;
+    padding-right: 5%;
+    font-size: 1.4rem;
+}
+
+.link:hover{
+    color : #e9ecef
+}

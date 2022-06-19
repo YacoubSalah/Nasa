@@ -1,0 +1,26 @@
+.container {
+    width: 90%;
+    padding: 1% 2% 1% 2%;
+    border-radius: 2vh;
+    background-color: #f8f9fa;
+    margin: auto;
+    justify-self: center;
+}
+
+.title {
+    text-align: center;
+}
+
+.media {
+    margin: auto;
+    text-align: center;
+    height: 50vh;
+}
+
+.description {
+    padding: 2%;
+    font-size: small;
+    line-height: 1.5em;
+    height: 5em;
+    overflow: auto;
+}
