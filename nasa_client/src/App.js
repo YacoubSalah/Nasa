@@ -10,124 +10,149 @@ import './App.css';
 function App() {
   const [libraryPosts, setLibraryPosts] = useState([])
   const [savedPosts, setSavedPosts] = useState([])
-  const [libraryPostsSaveStatus, setlibraryPostsSaveStatus] = useState()
-  const [savedPostsIds, setsavedPostsIds] = useState()
-  const [doesSavedPostsNeedBack, setdoesSavedPostsNeedBack] = useState(false)
-
-  useEffect(function () {
-    if (doesSavedPostsNeedBack) {
-      updateSavedPostToDB()
-    }
-  }, [doesSavedPostsNeedBack])
+  const [isLibraryPostsMediaReady, setIsLibraryPostsMediaReady] = useState(true)
 
   useEffect(function () {
     getSavedPosts()
   }, [])
 
-  useEffect(() => {
-    if (libraryPosts.length && Object.keys(libraryPostsSaveStatus).length) {
-      updateLibraryForNewSaves()
+  useEffect(function () {
+    if (!isLibraryPostsMediaReady) {
+      getLibraryPostsMedia()
     }
-  }, [savedPosts, libraryPosts])
+  }, [libraryPosts])
 
-  function updateLibraryForNewSaves() {
-    let tempLibraryPost = [...libraryPosts]
-    let templibraryPostsSaveStatus = { ...libraryPostsSaveStatus }
-    let isTempLibraryPostModified = false
-    for (let post of savedPosts) {
-      let x = templibraryPostsSaveStatus[post.nasa_id]
-      if ((x === true || x === false) && x !== post.saved) {
-        let Tpost = tempLibraryPost.find((p) => p.nasa_id === post.nasa_id)
-        Tpost.saved = !Tpost.saved
-        templibraryPostsSaveStatus[post.nasa_id] = !templibraryPostsSaveStatus[post.nasa_id]
-        isTempLibraryPostModified = true
-      }
-    }
-    if (isTempLibraryPostModified) {
-      setLibraryPosts(tempLibraryPost)
-      setlibraryPostsSaveStatus(templibraryPostsSaveStatus)
-    }
-  }
 
   function getSavedPosts() {
     let link = serverLinks.savedPosts
     axios.get(link)
       .then((res) => {
         setSavedPosts(res.data)
-        generatedSavedPostsIds(res.data)
+
       })
       .catch((err) => {
         setSavedPosts([])
       })
   }
 
-  function generatedSavedPostsIds(posts) {
-    let savedPostsIds = new Set()
-    for (let post of posts) {
-      savedPostsIds.add(post.nasa_id)
+  function getLibraryPostsMedia() {
+    setIsLibraryPostsMediaReady(true)
+    let tempSavedPosts = [...libraryPosts]
+    tempSavedPosts.forEach(async (tempSavedPost) => {
+      if (tempSavedPost.mediaReady === undefined || tempSavedPost.mediaReady === false) {
+        getPostMedia(tempSavedPost, tempSavedPosts)
+      }
+    })
+
+  }
+
+  function getPostMedia(tempSavedPost, tempSavedPosts) {
+    let media = ""
+    axios.get(tempSavedPost.media)
+      .then((mediaList) => {
+
+
+        let thumbnail = filterMedia(mediaList.data)
+        if (thumbnail) {
+          tempSavedPost.thumbnail = thumbnail
+          tempSavedPost.mediaReady = true
+        } else {
+          console.log(tempSavedPost.title);
+          console.log(tempSavedPost.media);
+          tempSavedPost.mediaReady = false
+        }
+        setLibraryPosts(tempSavedPosts)
+
+
+      })
+      .catch()
+    return media
+  }
+
+  function filterMedia(media) {
+    if (media) {
+      let thumbnail = ""
+      for (let m of media) {
+        if (m.includes("thumb.jpg")) {
+          thumbnail = m
+          break
+        }
+      }
+      if (thumbnail) {
+        return thumbnail
+      }
     }
-    setsavedPostsIds(savedPostsIds)
+    return false
   }
 
   function getLibraryPosts(searchWord) {
     let link = serverLinks.nasaLibrary + searchWord
     axios.get(link)
-      .then((libraryPosts) => {
-        setLibraryPosts(libraryPosts.data)
-        generateLibraryPostsSaveStatus(libraryPosts.data)
+      .then((libraryPostsResponse) => {
+        let syncedLibrarayPosts = syncLibraryWithSaved(libraryPostsResponse.data)
+        setLibraryPosts(syncedLibrarayPosts)
+        setIsLibraryPostsMediaReady(false)
       })
       .catch((err) => {
         setLibraryPosts([])
       })
   }
 
-  function generateLibraryPostsSaveStatus(posts) {
-    let libraryPostsSaveStatus = {}
-    for (let post of posts) {
-      libraryPostsSaveStatus[post.nasa_id] = false
-    }
-    setlibraryPostsSaveStatus(libraryPostsSaveStatus)
-  }
-
-  function savePost(post) {
-    let postNasaId = post.nasa_id
-    let tempSavedPost = [...savedPosts]
-    if (savedPostsIds.has(postNasaId)) {
-      for (let postIndex in tempSavedPost) {
-        if (tempSavedPost[postIndex].nasa_id == postNasaId) {
-          tempSavedPost[postIndex].saved = true
+  function syncLibraryWithSaved(UnsyncedLibrarayPosts) {
+    let tempUnsyncedlibrarayPosts = [...UnsyncedLibrarayPosts]
+    for (let tempUnsyncedLibraryPost of tempUnsyncedlibrarayPosts) {
+      for (let savedPost of savedPosts) {
+        if (areTheSamePost(tempUnsyncedLibraryPost, savedPost)) {
+          tempUnsyncedLibraryPost.saved = savedPost.saved
           break;
         }
       }
-    } else {
-      let tempSavedPostIds = savedPostsIds
-      tempSavedPostIds.add(postNasaId)
-      setsavedPostsIds(tempSavedPostIds)
-      tempSavedPost.push(post)
     }
-    setSavedPosts(tempSavedPost)
+    return tempUnsyncedlibrarayPosts
+  }
+
+  function areTheSamePost(post1, post2) {
+    if (post1.nasa_id === post2.nasa_id) {
+      return true
+    }
+    return false
+  }
+
+  function savePost(post) {
+    let tempSavedPosts = [...savedPosts]
+    let tempSavedPost = tempSavedPosts.find(t => t.nasa_id === post.nasa_id)
+    if (tempSavedPost) {
+      tempSavedPost.saved = true
+    } else {
+      post.saved = true
+      tempSavedPosts.push(post)
+    }
+    if (libraryPosts.length) {
+      let syncedlibraryPosts = syncLibraryWithSaved(libraryPosts)
+      setLibraryPosts(syncedlibraryPosts)
+    }
+    setSavedPosts(tempSavedPosts)
+    updateSavedPostToDB()
   }
 
   function unsavePost(post) {
-    let postNasaId = post.nasa_id
-    let tempSavedPost = [...savedPosts]
-    for (let postIndex in tempSavedPost) {
-      if (tempSavedPost[postIndex].nasa_id == postNasaId) {
-        tempSavedPost[postIndex].saved = false
-        break;
-      }
+    let tempSavedPosts = [...savedPosts]
+    let tempSavedPost = tempSavedPosts.find(t => t.nasa_id === post.nasa_id)
+    tempSavedPost.saved = false
+    if (libraryPosts.length) {
+      let syncedLibraryPosts = syncLibraryWithSaved(libraryPosts)
+      setLibraryPosts(syncedLibraryPosts)
     }
-    setSavedPosts(tempSavedPost)
+    setSavedPosts(tempSavedPosts)
+    updateSavedPostToDB()
   }
 
   function updateSavedPostToDB() {
-    let postsToSave = savedPosts.filter(p => p.saved == true)
+    let postsToSave = savedPosts.filter(p => p.saved === true)
     axios.put(serverLinks.savedPosts, postsToSave)
   }
 
-  function getPostMedia(post) {
 
-  }
 
   return (
     <div>

@@ -16,6 +16,7 @@
 .postMedia {
     height: 20vh;
     margin: 0 auto 0 auto;
+    object-fit: cover;
 }
 
 .description {
@@ -28,4 +29,10 @@
     bottom: 1vh;
     display:grid;
     min-width: 93%;
+}
+
+img{
+    align-self: center;
+    width: 80%;
+    max-height: 20vh;
 }

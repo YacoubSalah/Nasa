@@ -5,7 +5,9 @@ const postSchema = new schema({
     description: String,
     media: String,
     nasa_id: String,
-    saved: { type: Boolean, default: true }
+    saved: { type: Boolean, default: true },
+    thumbnail: String,
+    mediaReady: {type:Boolean , default:false}
 })
 
 const postModel = mongoose.model('post', postSchema)
